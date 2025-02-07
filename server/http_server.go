@@ -70,11 +70,11 @@ func login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    sessionToken,
-		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
-		HttpOnly: true,                           // cookie is not accessible via JavaScript
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: true,
 	})
 
-	user.SessionToken = sessionToken // store session token in the database
+	user.SessionToken = sessionToken
 	users[username] = user
 
 	// Cross-Site Request Forgery (CSRF): now that the above session
@@ -92,11 +92,11 @@ func login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "csrf_token",
 		Value:    csrfToken,
-		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
-		HttpOnly: false,                          // cookie is not accessible via JavaScript
+		Expires:  time.Now().Add(24 * time.Hour),
+		HttpOnly: false,
 	})
 
-	user.CSRFToken = csrfToken // store CSRF token in the database
+	user.CSRFToken = csrfToken
 
 	fmt.Fprintln(w, "Login successful")
 }
