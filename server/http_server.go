@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type Login struct {
@@ -47,7 +48,58 @@ func register(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "User %s has been registered", username)
 }
 
-func login(w http.ResponseWriter, r *http.Request) {}
+func login(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	username := r.FormValue("username")
+	password := r.FormValue("password")
+
+	user, ok := users[username]
+	if !ok || !checkPasswordHash(password, user.HashedPassword) {
+		http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		return
+	}
+
+	sessionToken := generateToken(32)
+
+	// set session token as cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    sessionToken,
+		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
+		HttpOnly: true,                           // cookie is not accessible via JavaScript
+	})
+
+	user.SessionToken = sessionToken // store session token in the database
+	users[username] = user
+
+	// Cross-Site Request Forgery (CSRF): now that the above session
+	// token is being sent with every request, if a malicious site
+	// triggers a request from my machine, it will contain the session
+	// token. Allowing any request sent from that site to be authenticated
+	// as valid. To prevent this, a CSRF token is generated and sent to the
+	// client. This token is then sent back with every request. The server
+	// can then verify that the token is correct and that the request is
+	// not a CSRF attack.
+
+	csrfToken := generateToken(32)
+
+	// set CSRF token as cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "csrf_token",
+		Value:    csrfToken,
+		Expires:  time.Now().Add(24 * time.Hour), // expires in 24 hours
+		HttpOnly: false,                          // cookie is not accessible via JavaScript
+	})
+
+	user.CSRFToken = csrfToken // store CSRF token in the database
+
+	fmt.Fprintln(w, "Login successful")
+}
 
 func logout(w http.ResponseWriter, r *http.Request) {}
 
