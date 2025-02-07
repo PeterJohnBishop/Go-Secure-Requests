@@ -14,6 +14,15 @@ type Login struct {
 
 var users = map[string]Login{}
 
+// Cross-Site Request Forgery (CSRF): now that the above session
+// token is being sent with every request, if a malicious site
+// triggers a request from my machine, it will contain the session
+// token. Allowing any request sent from that site to be authenticated
+// as valid. To prevent this, a CSRF token is generated and sent to the
+// client. This token is then sent back with every request. The server
+// can then verify that the token is correct and that the request is
+// not a CSRF attack.
+
 func Http_Server() {
 	http.HandleFunc("/register", register)
 	http.HandleFunc("/login", login)
@@ -49,7 +58,6 @@ func register(w http.ResponseWriter, r *http.Request) {
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -65,8 +73,9 @@ func login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sessionToken := generateToken(32)
+	csrfToken := generateToken(32)
 
-	// set session token as cookie
+	// Set session token as cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    sessionToken,
@@ -74,21 +83,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	user.SessionToken = sessionToken
-	users[username] = user
-
-	// Cross-Site Request Forgery (CSRF): now that the above session
-	// token is being sent with every request, if a malicious site
-	// triggers a request from my machine, it will contain the session
-	// token. Allowing any request sent from that site to be authenticated
-	// as valid. To prevent this, a CSRF token is generated and sent to the
-	// client. This token is then sent back with every request. The server
-	// can then verify that the token is correct and that the request is
-	// not a CSRF attack.
-
-	csrfToken := generateToken(32)
-
-	// set CSRF token as cookie
+	// Set CSRF token as cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "csrf_token",
 		Value:    csrfToken,
@@ -96,11 +91,65 @@ func login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: false,
 	})
 
+	// Store tokens in user object
+	user.SessionToken = sessionToken
 	user.CSRFToken = csrfToken
+	users[username] = user
 
 	fmt.Fprintln(w, "Login successful")
 }
 
-func logout(w http.ResponseWriter, r *http.Request) {}
+func logout(w http.ResponseWriter, r *http.Request) {
 
-func protected(w http.ResponseWriter, r *http.Request) {}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := Authorize(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	username := r.FormValue("username")
+	user, ok := users[username]
+	if !ok {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	user.SessionToken = ""
+	user.CSRFToken = ""
+	users[username] = user
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    "session_token",
+		Value:   "",
+		Expires: time.Now(),
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    "csrf_token",
+		Value:   "",
+		Expires: time.Now(),
+	})
+
+	fmt.Fprintln(w, "Logout successful")
+}
+
+func protected(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := Authorize(r)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	fmt.Fprintln(w, "Protected resource")
+}

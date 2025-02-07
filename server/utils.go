@@ -24,5 +24,5 @@ func generateToken(length int) string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return base64.URLEncoding.EncodeToString(b)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
