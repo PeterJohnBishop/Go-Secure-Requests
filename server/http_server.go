@@ -9,10 +9,11 @@ import (
 )
 
 type Login struct {
-	HashedPassword string
-	SessionToken   string
-	CSRFToken      string
-	TOTPSecret     string
+	HashedPassword    string
+	SessionToken      string
+	CSRFToken         string
+	Pending_2fa_Token string
+	TOTPSecret        string
 }
 
 var users = map[string]Login{}
@@ -29,6 +30,7 @@ var users = map[string]Login{}
 func Http_Server() {
 	http.HandleFunc("/register", register)
 	http.HandleFunc("/login", login)
+	http.HandleFunc("/2fa", twoFactor)
 	http.HandleFunc("/logout", logout)
 	http.HandleFunc("/protected", protected)
 	http.ListenAndServe(":8080", nil)
@@ -57,18 +59,18 @@ func register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	hashedPassword, _ := hashedPassword(password)
-	users[email] = Login{HashedPassword: hashedPassword}
 
 	secret, qrURL, err := generateSecretKey(email)
 	if err != nil {
 		log.Fatal("Error generating secret key:", err)
 	}
 
-	users[email] = Login{TOTPSecret: secret}
+	users[email] = Login{HashedPassword: hashedPassword, TOTPSecret: secret}
 
 	response := map[string]interface{}{
-		"message":     "Login successful",
-		"qr_code_url": qrURL,
+		"message":      "Login successful",
+		"2fa_required": true,
+		"qr_code_url":  qrURL,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -80,7 +82,6 @@ func register(w http.ResponseWriter, r *http.Request) {
 func login(w http.ResponseWriter, r *http.Request) {
 
 	// step 2: check the login password hash against the version stored in the users dictonary (database),
-	// then issue tokens.
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -93,6 +94,65 @@ func login(w http.ResponseWriter, r *http.Request) {
 	user, ok := users[email]
 	if !ok || !checkPasswordHash(password, user.HashedPassword) {
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		return
+	}
+
+	Pending_2fa_Token := generateToken(32)
+
+	users[email] = Login{Pending_2fa_Token: Pending_2fa_Token}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "pending_2fa_token",
+		Value:    Pending_2fa_Token,
+		Expires:  time.Now().Add(5 * time.Minute), // 5min time limit
+		HttpOnly: true,                            // true so the cookie is not accessible by the client
+	})
+
+	fmt.Fprintln(w, "Login successful")
+}
+
+func twoFactor(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	errA := PreAuthorize(r)
+	if errA != nil {
+		fmt.Println(errA)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	t, err := r.Cookie("pending_2fa_token")
+	if err != nil || t.Value == "" {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	pendingToken := t.Value
+
+	// Find user by session token
+	var user *Login
+	for _, u := range users {
+		if u.Pending_2fa_Token == pendingToken {
+			user = &u
+			break
+		}
+	}
+
+	if user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	user_otp := r.FormValue("otp")
+
+	secondAuthPassed := verifyTOTP(user.TOTPSecret, user_otp)
+
+	if !secondAuthPassed {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -118,9 +178,15 @@ func login(w http.ResponseWriter, r *http.Request) {
 	// Store tokens in user object
 	user.SessionToken = sessionToken
 	user.CSRFToken = csrfToken
-	users[email] = user
+	user.Pending_2fa_Token = ""
 
-	fmt.Fprintln(w, "Login successful")
+	http.SetCookie(w, &http.Cookie{
+		Name:    "pending_2fa_token",
+		Value:   "",
+		Expires: time.Now(),
+	})
+
+	fmt.Fprintln(w, "2FA authenticated!")
 }
 
 func protected(w http.ResponseWriter, r *http.Request) {

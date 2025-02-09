@@ -8,6 +8,31 @@ import (
 
 var ErrAuth = errors.New("authentication error")
 
+func PreAuthorize(r *http.Request) error {
+	// Retrieve pending token from cookie
+	t, err := r.Cookie("pending_2fa_token")
+	if err != nil || t.Value == "" {
+		return ErrAuth
+	}
+
+	pendingToken := t.Value
+
+	// Find user by pending token
+	var user *Login
+	for _, u := range users {
+		if u.Pending_2fa_Token == pendingToken {
+			user = &u
+			break
+		}
+	}
+
+	if user == nil {
+		return ErrAuth
+	}
+
+	return nil
+}
+
 func Authorize(r *http.Request) error {
 	// Retrieve session token from cookie
 	st, err := r.Cookie("session_token")
