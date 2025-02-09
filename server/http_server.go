@@ -24,8 +24,8 @@ func Http_Server() {
 	mux.Handle("/register", strictSOPMiddleware(http.HandlerFunc(register)))
 	mux.Handle("/login", strictSOPMiddleware(http.HandlerFunc(login)))
 	mux.Handle("/2fa", strictSOPMiddleware(http.HandlerFunc(twoFactor)))
-	mux.Handle("/logout", strictSOPMiddleware(http.HandlerFunc(logout)))
-	mux.Handle("/protected", strictSOPMiddleware(http.HandlerFunc(protected)))
+	mux.Handle("/logout", corsMiddleware(http.HandlerFunc(logout)))
+	mux.Handle("/protected", corsMiddleware(http.HandlerFunc(protected)))
 
 	http.ListenAndServe(":8080", mux)
 }
