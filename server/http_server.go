@@ -19,12 +19,15 @@ type Login struct {
 var users = map[string]Login{}
 
 func Http_Server() {
-	http.HandleFunc("/register", register)
-	http.HandleFunc("/login", login)
-	http.HandleFunc("/2fa", twoFactor)
-	http.HandleFunc("/logout", logout)
-	http.HandleFunc("/protected", protected)
-	http.ListenAndServe(":8080", nil)
+	mux := http.NewServeMux()
+
+	mux.Handle("/register", strictSOPMiddleware(http.HandlerFunc(register)))
+	mux.Handle("/login", strictSOPMiddleware(http.HandlerFunc(login)))
+	mux.Handle("/2fa", strictSOPMiddleware(http.HandlerFunc(twoFactor)))
+	mux.Handle("/logout", strictSOPMiddleware(http.HandlerFunc(logout)))
+	mux.Handle("/protected", strictSOPMiddleware(http.HandlerFunc(protected)))
+
+	http.ListenAndServe(":8080", mux)
 }
 
 func register(w http.ResponseWriter, r *http.Request) {
