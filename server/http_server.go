@@ -59,8 +59,9 @@ func register(w http.ResponseWriter, r *http.Request) {
 	users[email] = Login{HashedPassword: hashedPassword, TOTPSecret: secret}
 
 	response := map[string]interface{}{
-		"message":     "Registration successful. Please setup TOTP Authentication.",
-		"qr_code_url": qrURL,
+		"message":        "Registration successful. Please setup TOTP Authentication.",
+		"qr_code_url":    qrURL,
+		"qr_code_base64": generateQRCodeBase64(qrURL),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

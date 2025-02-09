@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/pquerna/otp/totp"
+	"github.com/skip2/go-qrcode"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -56,4 +57,16 @@ func verifyTOTP(userSecret string, otp string) bool {
 		fmt.Println("Invalid OTP.")
 		return false
 	}
+}
+
+func generateQRCodeBase64(textToEncode string) string {
+
+	png, err := qrcode.Encode(textToEncode, qrcode.Medium, 256)
+	if err != nil {
+		return err.Error()
+	}
+
+	base64Image := base64.StdEncoding.EncodeToString(png)
+
+	return base64Image
 }
