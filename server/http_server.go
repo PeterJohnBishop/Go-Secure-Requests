@@ -18,15 +18,6 @@ type Login struct {
 
 var users = map[string]Login{}
 
-// Cross-Site Request Forgery (CSRF): now that the above session
-// token is being sent with every request, if a malicious site
-// triggers a request from my machine, it will contain the session
-// token. Allowing any request sent from that site to be authenticated
-// as valid. To prevent this, a CSRF token is generated and sent to the
-// client. This token is then sent back with every request. The server
-// can then verify that the token is correct and that the request is
-// not a CSRF attack.
-
 func Http_Server() {
 	http.HandleFunc("/register", register)
 	http.HandleFunc("/login", login)
@@ -68,15 +59,12 @@ func register(w http.ResponseWriter, r *http.Request) {
 	users[email] = Login{HashedPassword: hashedPassword, TOTPSecret: secret}
 
 	response := map[string]interface{}{
-		"message":      "Login successful",
-		"2fa_required": true,
-		"qr_code_url":  qrURL,
+		"message":     "Registration successful. Please setup TOTP Authentication.",
+		"qr_code_url": qrURL,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
-
-	fmt.Fprintf(w, "User %s has been registered", email)
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -108,7 +96,12 @@ func login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,                            // true so the cookie is not accessible by the client
 	})
 
-	fmt.Fprintln(w, "Login successful")
+	response := map[string]interface{}{
+		"message": "Email and password validated. You have 5 minutes to complete TOTP Authentication.",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func twoFactor(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +128,6 @@ func twoFactor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find user by session token
 	var user *Login
 	for _, u := range users {
 		if u.Pending_2fa_Token == pendingToken {
@@ -188,7 +180,12 @@ func twoFactor(w http.ResponseWriter, r *http.Request) {
 		Expires: time.Now(),
 	})
 
-	fmt.Fprintln(w, "2FA authenticated!")
+	response := map[string]interface{}{
+		"message": "TOTP Authentication Successful.",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func protected(w http.ResponseWriter, r *http.Request) {
@@ -207,7 +204,12 @@ func protected(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintln(w, "Protected resource")
+	response := map[string]interface{}{
+		"message": "Protected route successfully accessed.",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 func logout(w http.ResponseWriter, r *http.Request) {
@@ -248,5 +250,10 @@ func logout(w http.ResponseWriter, r *http.Request) {
 		Expires: time.Now(),
 	})
 
-	fmt.Fprintln(w, "Logout successful")
+	response := map[string]interface{}{
+		"message": "Logged Out",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
