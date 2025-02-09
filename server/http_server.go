@@ -38,7 +38,7 @@ func Http_Server() {
 
 func register(w http.ResponseWriter, r *http.Request) {
 
-	// step 1: create a user account and save the password in hashed form with bcrypt.
+	// step 1: create a user account and save the hashed password. Generate and save TOTP secret key.
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -81,7 +81,7 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 func login(w http.ResponseWriter, r *http.Request) {
 
-	// step 2: check the login password hash against the version stored in the users dictonary (database),
+	// step 2: Verify email / password. Generate a temp token on success.
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -99,7 +99,7 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	Pending_2fa_Token := generateToken(32)
 
-	users[email] = Login{Pending_2fa_Token: Pending_2fa_Token}
+	users[email] = Login{HashedPassword: user.HashedPassword, Pending_2fa_Token: Pending_2fa_Token, TOTPSecret: user.TOTPSecret}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "pending_2fa_token",
@@ -113,15 +113,10 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 func twoFactor(w http.ResponseWriter, r *http.Request) {
 
+	// step 3: Verify temp token, then verify TOTP code. On success generate and set session and crsf tokens. Clear temp token.
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	errA := PreAuthorize(r)
-	if errA != nil {
-		fmt.Println(errA)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -132,6 +127,13 @@ func twoFactor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pendingToken := t.Value
+
+	errA := PreAuthorize(r)
+	if errA != nil {
+		fmt.Println(errA)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Find user by session token
 	var user *Login

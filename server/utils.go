@@ -47,10 +47,6 @@ func generateSecretKey(email string) (string, string, error) {
 
 func verifyTOTP(userSecret string, otp string) bool {
 
-	// User enters an OTP from their app
-	fmt.Print("Enter OTP: ")
-	fmt.Scanln(&otp)
-
 	// Validate the OTP
 	valid := totp.Validate(otp, userSecret)
 	if valid {
