@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"cloud.google.com/go/firestore"
 )
 
 type Profile struct {
@@ -13,7 +15,7 @@ type Profile struct {
 	TOTPSecret   string
 }
 
-func CreateProfile(ctx context.Context, documentId string, profile map[string]interface{}) error {
+func CreateProfile(ctx context.Context, documentId string, profile map[string]interface{}) (string, bool) {
 
 	// Create a new context with a 60-second timeout
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
@@ -21,8 +23,24 @@ func CreateProfile(ctx context.Context, documentId string, profile map[string]in
 
 	_, err := firestoreClient.Collection("profiles").Doc(documentId).Set(ctx, profile)
 	if err != nil {
-		return fmt.Errorf("failed to add item: %v", err)
+		return err.Error(), false
 	}
-	fmt.Println("Item added successfully!")
-	return nil
+	fmt.Println("Profile added successfully!")
+	return "Success", true
+}
+
+func UpdateProfileField(userID string, field string, newValue interface{}) (string, bool) {
+	docRef := firestoreClient.Collection("profiles").Doc(userID)
+
+	// Update the specific field
+	_, err := docRef.Update(context.Background(), []firestore.Update{
+		{
+			Path:  field,
+			Value: newValue,
+		},
+	})
+	if err != nil {
+		return err.Error(), false
+	}
+	return "Success", true
 }

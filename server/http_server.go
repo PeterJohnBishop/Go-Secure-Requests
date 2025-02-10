@@ -19,6 +19,7 @@ func Http_Server() {
 	mux := http.NewServeMux()
 
 	mux.Handle("/register", http.HandlerFunc(routes.Register))
+	mux.Handle("/verify", http.HandlerFunc(routes.Verify))
 	// mux.Handle("/login", http.HandlerFunc(routes.Login))
 	// mux.Handle("/2fa", http.HandlerFunc(routes.TOTP))
 	// mux.Handle("/logout", http.HandlerFunc(routes.Logout))
