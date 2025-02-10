@@ -78,7 +78,12 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 func Verify(w http.ResponseWriter, r *http.Request) {
 
+	// After Client side login verify Firebase UserIDToken generate and save a temp token
+	// Set temp token as cookie and send user for TOTP authentication
+
 	ctx := context.Background()
+
+	uid := r.FormValue("uid")
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -97,7 +102,6 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// "Bearer <token>"
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 	if token == authHeader {
 		http.Error(w, "Invalid token format", http.StatusUnauthorized)
@@ -110,9 +114,8 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uid := r.FormValue("uid")
 	temp := GenerateToken(32)
-	_, updated := firebase.UpdateProfileField(uid, "temp_token", temp)
+	_, updated := firebase.UpdateProfileField(ctx, uid, "temp_token", temp)
 	if !updated {
 		http.Error(w, "Error saving temp token.", http.StatusUnauthorized)
 		return
@@ -136,7 +139,10 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 
 func TOTP(w http.ResponseWriter, r *http.Request) {
 
-	// step 3: Verify temp token, then verify TOTP code. On success generate and set session and crsf tokens. Clear temp token.
+	ctx := context.Background()
+
+	uid := r.FormValue("uid")
+	user_otp := r.FormValue("otp")
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -149,36 +155,19 @@ func TOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := r.Cookie("temp")
-	if err != nil || t.Value == "" {
+	userProfile, _, found := firebase.GetProfile(ctx, uid)
+	if !found {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	temp := t.Value
-
-	errA := PreAuthorize(r)
-	if errA != nil {
+	preAuth := PreAuthorize(ctx, userProfile, r)
+	if preAuth != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	var user *Login
-	for _, u := range users {
-		if u.Pending_2fa_Token == pendingToken {
-			user = &u
-			break
-		}
-	}
-
-	if user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	user_otp := r.FormValue("otp")
-
-	secondAuthPassed := VerifyTOTP(user.TOTPSecret, user_otp)
+	secondAuthPassed := VerifyTOTP(userProfile.TOTPSecret, user_otp)
 
 	if !secondAuthPassed {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -204,11 +193,17 @@ func TOTP(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: false, // false so the client can save and send it back for verification
 	})
 
-	// Store tokens in user object
-	user.SessionToken = sessionToken
-	user.CSRFToken = csrfToken
-	user.Pending_2fa_Token = ""
-	users["pjb.den@gmail.com"] = Login{SessionToken: sessionToken, CSRFToken: csrfToken, Pending_2fa_Token: ""} // hardcoded for testing!
+	updates := map[string]interface{}{
+		"session_token": sessionToken,
+		"csrf_token":    csrfToken,
+		"temp_token":    "",
+	}
+
+	_, updated := firebase.UpdateMultipleProfileFields(ctx, uid, updates)
+	if !updated {
+		http.Error(w, "Updating profile tokens failed", http.StatusUnauthorized)
+		return
+	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:    "pending_2fa_token",

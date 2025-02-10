@@ -1,38 +1,29 @@
 package routes
 
-// import (
-// 	"errors"
-// 	"fmt"
-// 	"net/http"
-// 	"net/url"
-// )
+import (
+	"automatic-fiesta-go/main.go/firebase"
+	"context"
+	"errors"
+	"net/http"
+)
 
-// var ErrAuth = errors.New("authentication error")
+var ErrAuth = errors.New("authentication error")
 
-// func PreAuthorize(r *http.Request) error {
-// 	// Retrieve pending token from cookie
-// 	t, err := r.Cookie("pending_2fa_token")
-// 	if err != nil || t.Value == "" {
-// 		return ErrAuth
-// 	}
+func PreAuthorize(ctx context.Context, userProfile firebase.Profile, r *http.Request) error {
+	// Retrieve pending token from cookie
+	t, err := r.Cookie("pending_2fa_token")
+	if err != nil || t.Value == "" {
+		return ErrAuth
+	}
 
-// 	pendingToken := t.Value
+	temp := t.Value
 
-// 	// Find user by pending token
-// 	var user *Login
-// 	for _, u := range users {
-// 		if u.Pending_2fa_Token == pendingToken {
-// 			user = &u
-// 			break
-// 		}
-// 	}
+	if userProfile.TempToken == "" || userProfile.TempToken != temp {
+		return ErrAuth
+	}
 
-// 	if user == nil {
-// 		return ErrAuth
-// 	}
-
-// 	return nil
-// }
+	return nil
+}
 
 // func Authorize(r *http.Request) error {
 // 	// Retrieve session token from cookie
