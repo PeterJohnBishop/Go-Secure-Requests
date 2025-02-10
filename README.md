@@ -1,3 +1,5 @@
+# * Currently Being Refactored for Firebase Integration *
+
 # Go Secure Requests
 A basic GO server implementing 2FA authentication, Same-Origin-Policy, and CORS 
 

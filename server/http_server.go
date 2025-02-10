@@ -20,8 +20,7 @@ func Http_Server() {
 
 	mux.Handle("/register", http.HandlerFunc(routes.Register))
 	mux.Handle("/verify", http.HandlerFunc(routes.Verify))
-	// mux.Handle("/login", http.HandlerFunc(routes.Login))
-	// mux.Handle("/2fa", http.HandlerFunc(routes.TOTP))
+	mux.Handle("/totp", http.HandlerFunc(routes.TOTP))
 	// mux.Handle("/logout", http.HandlerFunc(routes.Logout))
 	// mux.Handle("/protected", routes.SecureHeaders(routes.StrictSOPMiddleware(http.HandlerFunc(routes.Protected))))
 

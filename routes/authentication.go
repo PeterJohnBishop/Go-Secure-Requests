@@ -16,7 +16,7 @@ import (
 func Register(w http.ResponseWriter, r *http.Request) {
 
 	// Send email and password to create a user in Firebase Authentication.
-	// On success generate a TOTP Secret Key, generate TOTP QR code, save secret key to new Profile doc in Firestore
+	// On success generate a TOTP Secret Key, generate TOTP QR code, save secret key to new user Profile in Firestore
 	// return QR code image
 
 	ctx := context.Background()
@@ -78,8 +78,8 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 func Verify(w http.ResponseWriter, r *http.Request) {
 
-	// After Client side login verify Firebase UserIDToken generate and save a temp token
-	// Set temp token as cookie and send user for TOTP authentication
+	// After Client side login verify Firebase UserIDToken generate and save a temp token in the user Profile.
+	// Set temp token as cookie and send user for TOTP authentication.
 
 	ctx := context.Background()
 
@@ -138,6 +138,9 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 }
 
 func TOTP(w http.ResponseWriter, r *http.Request) {
+
+	// User sends uid and OTP for verfication
+	// On verification session and CSRF tokens are generated, saved to the user Profile, and stored in cookies.
 
 	ctx := context.Background()
 
