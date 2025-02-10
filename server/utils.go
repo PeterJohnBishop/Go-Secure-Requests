@@ -70,3 +70,14 @@ func generateQRCodeBase64(textToEncode string) string {
 
 	return base64Image
 }
+
+func generateQRCodePNG(textToEncode string) ([]byte, error) {
+
+	png, err := qrcode.Encode(textToEncode, qrcode.Medium, 256)
+	if err != nil {
+		return nil, err
+	}
+
+	return png, nil
+
+}

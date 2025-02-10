@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -21,11 +22,11 @@ var users = map[string]Login{}
 func Http_Server() {
 	mux := http.NewServeMux()
 
-	mux.Handle("/register", strictSOPMiddleware(http.HandlerFunc(register)))
-	mux.Handle("/login", strictSOPMiddleware(http.HandlerFunc(login)))
-	mux.Handle("/2fa", strictSOPMiddleware(http.HandlerFunc(twoFactor)))
-	mux.Handle("/logout", corsMiddleware(http.HandlerFunc(logout)))
-	mux.Handle("/protected", corsMiddleware(http.HandlerFunc(protected)))
+	mux.Handle("/register", secureHeaders(strictSOPMiddleware(http.HandlerFunc(register))))
+	mux.Handle("/login", secureHeaders(strictSOPMiddleware(http.HandlerFunc(login))))
+	mux.Handle("/2fa", secureHeaders(strictSOPMiddleware(http.HandlerFunc(twoFactor))))
+	mux.Handle("/logout", secureHeaders(strictSOPMiddleware(http.HandlerFunc(logout))))
+	mux.Handle("/protected", secureHeaders(strictSOPMiddleware(http.HandlerFunc(protected))))
 
 	http.ListenAndServe(":8080", mux)
 }
@@ -36,6 +37,12 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		http.Error(w, "Invalid Content-Type, must be multipart/form-data", http.StatusUnsupportedMediaType)
 		return
 	}
 
@@ -61,14 +68,22 @@ func register(w http.ResponseWriter, r *http.Request) {
 
 	users[email] = Login{HashedPassword: hashedPassword, TOTPSecret: secret}
 
-	response := map[string]interface{}{
-		"message":        "Registration successful. Please setup TOTP Authentication.",
-		"qr_code_url":    qrURL,
-		"qr_code_base64": generateQRCodeBase64(qrURL),
+	qrPng, error := generateQRCodePNG(qrURL)
+	if error != nil {
+		log.Fatal("Error generating QR Code:", error)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	w.Header().Set("Content-Type", "image/png")
+	w.Write(qrPng)
+
+	// response := map[string]interface{}{
+	// 	"message":        "Registration successful. Please setup TOTP Authentication.",
+	// 	"qr_code_url":    qrURL,
+	// 	"qr_code_base64": generateQRCodeBase64(qrURL),
+	// }
+
+	// w.Header().Set("Content-Type", "application/json")
+	// json.NewEncoder(w).Encode(response)
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +92,12 @@ func login(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		http.Error(w, "Invalid Content-Type, must be multipart/form-data", http.StatusUnsupportedMediaType)
 		return
 	}
 
@@ -114,6 +135,12 @@ func twoFactor(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		http.Error(w, "Invalid Content-Type, must be multipart/form-data", http.StatusUnsupportedMediaType)
 		return
 	}
 
@@ -177,6 +204,7 @@ func twoFactor(w http.ResponseWriter, r *http.Request) {
 	user.SessionToken = sessionToken
 	user.CSRFToken = csrfToken
 	user.Pending_2fa_Token = ""
+	users["pjb.den@gmail.com"] = Login{SessionToken: sessionToken, CSRFToken: csrfToken, Pending_2fa_Token: ""} // hardcoded for testing!
 
 	http.SetCookie(w, &http.Cookie{
 		Name:    "pending_2fa_token",
@@ -222,6 +250,12 @@ func logout(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	contentType := r.Header.Get("Content-Type")
+	if !strings.HasPrefix(contentType, "multipart/form-data") {
+		http.Error(w, "Invalid Content-Type, must be multipart/form-data", http.StatusUnsupportedMediaType)
 		return
 	}
 
