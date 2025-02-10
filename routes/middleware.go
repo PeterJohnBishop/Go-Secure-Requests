@@ -1,10 +1,10 @@
-package server
+package routes
 
 import (
 	"net/http"
 )
 
-func corsMiddleware(next http.Handler) http.Handler {
+func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -19,7 +19,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func strictSOPMiddleware(next http.Handler) http.Handler {
+func StrictSOPMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 
@@ -32,7 +32,7 @@ func strictSOPMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func secureHeaders(next http.Handler) http.Handler {
+func SecureHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'")
 		w.Header().Set("X-Content-Type-Options", "nosniff")

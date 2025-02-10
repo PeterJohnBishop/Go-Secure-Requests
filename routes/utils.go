@@ -1,4 +1,4 @@
-package server
+package routes
 
 import (
 	"crypto/rand"
@@ -11,17 +11,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func hashedPassword(password string) (string, error) {
+func HashedPassword(password string) (string, error) {
 	hashedPassword, error := bcrypt.GenerateFromPassword([]byte(password), 10)
 	return string(hashedPassword), error
 }
 
-func checkPasswordHash(password, hash string) bool {
+func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
-func generateToken(length int) string {
+func GenerateToken(length int) string {
 	b := make([]byte, length)
 	_, err := rand.Read(b)
 	if err != nil {
@@ -30,7 +30,7 @@ func generateToken(length int) string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func generateSecretKey(email string) (string, string, error) {
+func GenerateSecretKey(email string) (string, string, error) {
 	key, err := totp.Generate(totp.GenerateOpts{
 		Issuer:      "YourAppName",
 		AccountName: email,
@@ -46,7 +46,7 @@ func generateSecretKey(email string) (string, string, error) {
 
 }
 
-func verifyTOTP(userSecret string, otp string) bool {
+func VerifyTOTP(userSecret string, otp string) bool {
 
 	// Validate the OTP
 	valid := totp.Validate(otp, userSecret)
@@ -59,7 +59,7 @@ func verifyTOTP(userSecret string, otp string) bool {
 	}
 }
 
-func generateQRCodeBase64(textToEncode string) string {
+func GenerateQRCodeBase64(textToEncode string) string {
 
 	png, err := qrcode.Encode(textToEncode, qrcode.Medium, 256)
 	if err != nil {
@@ -71,7 +71,7 @@ func generateQRCodeBase64(textToEncode string) string {
 	return base64Image
 }
 
-func generateQRCodePNG(textToEncode string) ([]byte, error) {
+func GenerateQRCodePNG(textToEncode string) ([]byte, error) {
 
 	png, err := qrcode.Encode(textToEncode, qrcode.Medium, 256)
 	if err != nil {
