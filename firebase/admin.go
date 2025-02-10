@@ -15,7 +15,7 @@ var authClient *auth.Client
 var firestoreClient *firestore.Client
 
 func Init() error {
-	opt := option.WithCredentialsFile("path/to/serviceAccountKey.json")
+	opt := option.WithCredentialsFile("firebase/automatic-fiesta-4fe57-firebase-adminsdk-fbsvc-923b968f5c.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		return err
