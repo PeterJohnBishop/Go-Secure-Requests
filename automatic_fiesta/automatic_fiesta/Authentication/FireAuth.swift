@@ -63,6 +63,21 @@ import PhotosUI
             }.resume()
         }
     
+    func SignInWithEmailAndPassword() {
+        
+        Auth.auth().signIn(withEmail: email, password: password) { (result, error) in
+                   if error != nil {
+                       self.success = false
+                       self.response = error?.localizedDescription ?? ""
+                   } else {
+                       self.success = true
+                       self.response = "Successfully signed in!"
+                       self.user = Auth.auth().currentUser
+                   }
+               }
+           
+    }
+    
     func fetchFirebaseAuthToken() {
         if let user = Auth.auth().currentUser {
             user.getIDToken { token, error in
@@ -80,6 +95,45 @@ import PhotosUI
         }
 
     }
+    
+    func validateBasicAuth(uid: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+            let url = URL(string: "\(baseURL)/verify")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+
+            let boundary = UUID().uuidString
+            request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+            var body = Data()
+
+            // Helper function to append form data
+            func appendFormField(_ name: String, value: String) {
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
+                body.append("\(value)\r\n".data(using: .utf8)!)
+            }
+
+            appendFormField("uid", value: uid)
+
+            // End boundary
+            body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+            request.httpBody = body
+
+            // Perform request
+            URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    completion(.failure(error))
+                    return
+                }
+
+                if data != nil {
+                    completion(.success(true))
+                } else {
+                    completion(.failure(NSError(domain: "Invalid Image", code: 0, userInfo: nil)))
+                }
+            }.resume()
+        }
     
     func GetCurrentUser() {
         if Auth.auth().currentUser != nil {
@@ -109,21 +163,6 @@ import PhotosUI
         if(handle != nil){
             Auth.auth().removeStateDidChangeListener(handle!)
         }
-    }
-    
-    func SignInWithEmailAndPassword() {
-        
-        Auth.auth().signIn(withEmail: email, password: password) { (result, error) in
-                   if error != nil {
-                       self.success = false
-                       self.response = error?.localizedDescription ?? ""
-                   } else {
-                       self.success = true
-                       self.response = "Successfully signed in!"
-                       self.user = Auth.auth().currentUser
-                   }
-               }
-           
     }
     
     func SendEmailVerfication(){

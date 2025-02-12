@@ -43,7 +43,11 @@ struct LoginView: View {
                    RoundedRectangle(cornerRadius: 8)
                        .fill(Color.white)
                        .shadow(color: .gray.opacity(0.4), radius: 4, x: 2, y: 2)
-               )
+               ).onChange(of: fireAuth.success) { oldValue, newValue in
+                   if newValue {
+                       // verify UserIDToken
+                   }
+               }
                Spacer()
                HStack{
                    Spacer()
@@ -57,8 +61,6 @@ struct LoginView: View {
                        })
                    Spacer()
                }
-           }.onAppear{
-               
            }
        }
     }
