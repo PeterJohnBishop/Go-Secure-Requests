@@ -124,6 +124,14 @@ import PhotosUI
         let boundary = UUID().uuidString
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
+        // Retrieve the JWT token from UserDefaults (or your preferred storage)
+        guard let token = UserDefaults.standard.string(forKey: "tempToken") else {
+            completion(.failure(NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "Missing authentication token"])))
+            return
+        }
+
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") // ✅ Add Auth Header
+
         var body = Data()
 
         // Helper function to append form data
@@ -140,18 +148,28 @@ import PhotosUI
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
         request.httpBody = body
+        request.setValue("\(body.count)", forHTTPHeaderField: "Content-Length") // ✅ Add Content-Length header
 
         // Perform request
-        URLSession.shared.dataTask(with: request) { _, response, error in
+        URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
                 completion(.failure(error))
                 return
             }
 
-            if response != nil {
-                completion(.success(true))
+            guard let httpResponse = response as? HTTPURLResponse else {
+                completion(.failure(NSError(domain: "InvalidResponse", code: -1, userInfo: nil)))
+                return
+            }
+
+            if (200...299).contains(httpResponse.statusCode) {
+                completion(.success(true)) // ✅ Check for success HTTP status codes
+            } else {
+                let errorMessage = "Server returned status code \(httpResponse.statusCode)"
+                completion(.failure(NSError(domain: "APIError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
             }
         }.resume()
     }
+
     
 }

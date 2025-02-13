@@ -125,6 +125,7 @@ struct RegisterView: View {
                                     switch result {
                                     case .success(let token):
                                         userIdToken = token
+                                        UserDefaults.standard.set(token, forKey: "tempToken")
                                         showNext = true
                                     case .failure(let error):
                                         print("Error: \(error.localizedDescription)")
