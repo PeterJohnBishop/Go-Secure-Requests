@@ -26,6 +26,7 @@ struct RegisterView: View {
                         Spacer()
                         if let qr = qr {
                             Text("Please setup TOTP Authenticaion by scanning this QR code with an Authenticator App.").fontWeight(.ultraLight)
+                                .padding()
                             Image(uiImage: qr)
                                 .resizable()
                                 .scaledToFit()

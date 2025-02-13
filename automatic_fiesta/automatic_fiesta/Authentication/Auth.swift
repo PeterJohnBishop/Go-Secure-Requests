@@ -60,6 +60,11 @@ import PhotosUI
         }
     }
     
+    func GetCurrentUser(completion: @escaping (User?) -> Void) {
+        let user = Auth.auth().currentUser
+        completion(user)
+    }
+    
     func GetIDToken(completion: @escaping (Result<String, Error>) -> Void) {
         if let user = Auth.auth().currentUser {
             user.getIDToken { token, error in
@@ -110,4 +115,43 @@ import PhotosUI
                 } 
             }.resume()
         }
+    
+    func validateTotpCode(uid: String, otp: String, completion: @escaping (Result<Bool, Error>) -> Void) {
+        let url = URL(string: "\(baseURL)/totp")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+
+        // Helper function to append form data
+        func appendFormField(_ name: String, value: String) {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(value)\r\n".data(using: .utf8)!)
+        }
+
+        appendFormField("uid", value: uid)
+        appendFormField("otp", value: otp)
+
+        // End boundary
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        request.httpBody = body
+
+        // Perform request
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let error = error {
+                completion(.failure(error))
+                return
+            }
+
+            if response != nil {
+                completion(.success(true))
+            }
+        }.resume()
+    }
+    
 }
