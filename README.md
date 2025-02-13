@@ -15,13 +15,14 @@ A basic GO server implementing 2FA authentication, Same-Origin-Policy, and CORS
 ![Setup](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/2_TOTP_Setup.png?raw=true)
 
 - User creation is successful when a user account is created, a user Profile doc is created, and the TOTP secret has been generated.
+- A bearer token is generated from Firebase Authentication and stored in UserDefaults memory on their device for use in the Authentication header of API requests.
 - The TOTP URL is converted to a QR code and displayed for the user to enable quick setup in an Authentication app.
 
 ## Login
 
 ![Login](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/3_Login.png?raw=true)
 
-- On basic authentication a base64 token is generated and saved in a shortlived cookie.
+- On login a fresh bearer token is generated from Firebase Authentication and stored in UserDefaults memory on their device for authenticating requests.
 
 ## TOTP One Time Passcode
 
@@ -29,6 +30,7 @@ A basic GO server implementing 2FA authentication, Same-Origin-Policy, and CORS
 
 - The user has a limited amount of time to setup time based TOTP authentication in an app like Google Authenticator
 - The OTP must be sent in the request as form data.
+- Bearer token is verified by Firebase.
 - If OTP passes verfication, a session token and a CSRF token are generated and saved to cookies with a 24h expiration. 
 
 ## Accessing a protected route
@@ -38,4 +40,4 @@ A basic GO server implementing 2FA authentication, Same-Origin-Policy, and CORS
 - If all of the above are satisfied and validated, a successful response can be sent.
 
 ## Logout
-- On logout the values of all cookies are cleared and the expiration is set to NOW.
+- On logout the values of all cookies are cleared and force expired, bearer token is revoked.
