@@ -7,12 +7,15 @@ A basic GO server implementing 2FA authentication, Same-Origin-Policy, and CORS
 
 ![Registration](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/1_Register.png?raw=true)
 
-- User creates a basic account with email and password credentials. 
-- The password is hashed with bcrypt and basic authentication is performed by bcrypt comparison.
-- At the same time a secret key is generated and saved to the user record for TOTP.
-- A TOTP URL and QR code in base64 are returned in the response.
+- User creates a basic account with email and password credentials, and a user account is created through Firebase Authentication.
+- At the same time a secret key is generated and saved to the user Profile Document on Firestore for TOTP.
+
+## TOTP Setup
 
 ![Setup](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/2_TOTP_Setup.png?raw=true)
+
+- User creation is successful when a user account is created, a user Profile doc is created, and the TOTP secret has been generated.
+- The TOTP URL is converted to a QR code and displayed for the user to enable quick setup in an Authentication app.
 
 ## Login
 
@@ -20,7 +23,7 @@ A basic GO server implementing 2FA authentication, Same-Origin-Policy, and CORS
 
 - On basic authentication a base64 token is generated and saved in a shortlived cookie.
 
-## 2FA
+## TOTP One Time Passcode
 
 ![TOTP](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/4_TOTP_Code.png?raw=true)
 
