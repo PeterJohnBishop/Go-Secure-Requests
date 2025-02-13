@@ -4,15 +4,26 @@
 A basic GO server implementing 2FA authentication, Same-Origin-Policy, and CORS 
 
 ## User Creation
+
+![Registration](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/1_Register.png?raw=true)
+
 - User creates a basic account with email and password credentials. 
 - The password is hashed with bcrypt and basic authentication is performed by bcrypt comparison.
 - At the same time a secret key is generated and saved to the user record for TOTP.
 - A TOTP URL and QR code in base64 are returned in the response.
 
+![Setup](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/2_TOTP_Setup.png?raw=true)
+
 ## Login
+
+![Login](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/3_Login.png?raw=true)
+
 - On basic authentication a base64 token is generated and saved in a shortlived cookie.
 
 ## 2FA
+
+![TOTP](https://github.com/PeterJohnBishop/Go-Secure-Requests/blob/main/assets/4_TOTP_Code.png?raw=true)
+
 - The user has a limited amount of time to setup time based TOTP authentication in an app like Google Authenticator
 - The OTP must be sent in the request as form data.
 - If OTP passes verfication, a session token and a CSRF token are generated and saved to cookies with a 24h expiration. 
